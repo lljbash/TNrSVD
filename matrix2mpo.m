@@ -18,6 +18,7 @@ function TN=matrix2mpo(A,n,varargin)
 %
 % 06-07-2016, Kim Batselier, Wenjian Yu, Luca Daniel, Ngai Wong
 
+addpath(genpath(pwd));
 
 if isscalar(n)
     d=varargin{1};
@@ -48,9 +49,9 @@ end
 % initialize TN
 TN.core=cell(1,d);
 TN.n=[1 n(1,:) R;R*ones(d-2,1) n(2:end-1,:) R*ones(d-2,1);R n(end,:) 1];
-TN.core{1}=zeros(prod(TN.n(1,1:end-1)),R);
+TN.core{1}=sptensor([prod(TN.n(1,1:end-1)),R]);
 for i=2:d
-    TN.core{i}=zeros([TN.n(i,1),prod(TN.n(i,2:end-1)),TN.n(i,end)]);
+    TN.core{i}=sptensor([TN.n(i,1),prod(TN.n(i,2:end-1)),TN.n(i,end)]);
 end
 
 r=1;
@@ -61,15 +62,16 @@ for i=1:prod(n(2:end,2))
            % matrices
            indices=[lin2ten(j,n(2:end,1))' lin2ten(i,n(2:end,2))'];
            temp=full(A((j-1)*tileX+1:j*tileX,(i-1)*tileY+1:i*tileY));
-           TN.core{1}(:,r)=temp(:);
+           [ii,~,val]=find(temp(:));
+           TN.core{1}(:,r)=sptensor(ii,val);
            for k=2:d-1
-               temp=zeros(n(k,:));
+               temp=sptensor(n(k,:));
                temp(indices(k-1,1),indices(k-1,2))=1;
-               TN.core{k}(r,:,r)=temp(:);
+               TN.core{k}(r,:,r)=reshape(temp, prod(n(k,:)));
            end
-           temp=zeros(n(end,:));
+           temp=sptensor(n(end,:));
            temp(indices(d-1,1),indices(d-1,2))=1;
-           TN.core{d}(r,:)=temp(:)';
+           TN.core{d}(r,:)=reshape(temp, prod(n(end,:)));
            r=r+1;
        end
    end
