@@ -45,14 +45,11 @@ for i=1:prod(n(2:end,2)) % i counts the columns
        R=R+length(rows{i});
    end
 end   
-return
+
 % initialize TN
 TN.core=cell(1,d);
 TN.n=[1 n(1,:) R;R*ones(d-2,1) n(2:end-1,:) R*ones(d-2,1);R n(end,:) 1];
-TN.core{1}=ndSparse.build([prod(TN.n(1,1:end-1)),R]);
-for i=2:d
-    TN.core{i}=ndSparse.build([TN.n(i,1),prod(TN.n(i,2:end-1)),TN.n(i,end)]);
-end
+nze=cell(1,d);
 
 r=1;
 for i=1:prod(n(2:end,2)) 
@@ -61,21 +58,20 @@ for i=1:prod(n(2:end,2))
            % determine the nonzero entries in each of the Kronecker product
            % matrices
            indices=[lin2ten(j,n(2:end,1))' lin2ten(i,n(2:end,2))'];
-           temp=full(A((j-1)*tileX+1:j*tileX,(i-1)*tileY+1:i*tileY));
-           TN.core{1}(:,r)=temp(:);
+           [ii,jj,vv]=find(A((j-1)*tileX+1:j*tileX,(i-1)*tileY+1:i*tileY));
+           temp=ones(numel(ii),1);
+           nze{1}=[nze{1};temp ii jj r*temp vv];
            for k=2:d-1
-               temp=zeros(n(k,:));
-               temp(indices(k-1,1),indices(k-1,2))=1;
-               TN.core{k}(r,:,r)=temp(:);
+               nze{k}=[nze{k};r indices(k-1,1) indices(k-1,2) r 1];
            end
-           temp=zeros(n(end,:));
-           temp(indices(d-1,1),indices(d-1,2))=1;
-           TN.core{d}(r,:)=temp(:)';
+           nze{d}=[nze{d};r indices(d-1,1) indices(d-1,2) 1 1];
            r=r+1;
        end
    end
 end
-for i=1:size(TN.n,1)
-    TN.core{i}=reshape(TN.core{i},TN.n(i,:));
+
+for i=1:d
+    TN.core{i}=ndSparse.build(nze{i}(:,1:4),nze{i}(:,5),TN.n(i,:));
 end
+
 end
